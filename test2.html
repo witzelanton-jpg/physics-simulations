@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<!--
+    ============================================================
+    Farb- und Formentest
+    ============================================================
+    Übungsseite für HTML, CSS und JavaScript.
+
+    Was die Seite kann:
+      - Farbe der Form über einen Farbwähler ändern
+      - Form wählen: Kreis, Quadrat oder Dreieck
+      - Form mit der Maus festhalten und verschieben (Drag & Drop)
+
+    Aufbau der Datei:
+      1. <head>   -> Infos über die Seite + CSS im <style>-Block (Aussehen)
+      2. <body>   -> alles, was man sieht (Text, Eingabefelder, Form)
+      3. <script> -> JavaScript (was passiert, wenn man etwas tut)
+    ============================================================
+-->
+<html lang="de">
+
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        /* ---------- Seite insgesamt ---------- */
+        body {
+         /* Farbverlauf von oben rechts (hellgelb) nach unten links (hellgrün).
+            Ein Verlauf ist für CSS ein Bild -> "background", nicht "background-color" */
+         background: linear-gradient(to bottom left, lightyellow, lightgreen);
+        }
+
+        /* ---------- Die verschiebbare Form ---------- */
+        /* "#" = Element mit der id "form" (gibt es nur einmal) */
+        #form {
+            width: 100px;
+            height: 100px;
+            background-color: blueviolet;   /* Startfarbe, wird per JavaScript überschrieben */
+            position: absolute;             /* frei platzierbar über left/top */
+            left: 300px;                    /* Abstand vom linken Rand */
+            top: 300px;                     /* Abstand vom oberen Rand */
+            cursor: grab;                   /* Mauszeiger wird über der Form zur Hand */
+
+        }
+
+        /* ---------- Formen ---------- */
+        /* "." = Klasse. JavaScript setzt eine dieser Klassen an #form.
+           Für "square" gibt es keine Regel: ein div ist von sich aus ein Quadrat. */
+        .circle {
+            border-radius: 50%;             /* Ecken maximal abrunden -> Kreis */
+        }
+        .triangle {
+            /* Zuschneiden entlang von 3 Punkten (x% y%, gemessen von oben links):
+               oben Mitte, unten links, unten rechts -> Dreieck */
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+            }
+
+        /* ---------- Karte: der farbige Kasten um den Inhalt ---------- */
+        .karte {
+            background-color: rgb(227, 166, 109);   /* rgb(rot, grün, blau), je 0-255 */
+            max-width: 600px;               /* höchstens 600px breit */
+            padding: 20px;                  /* Innenabstand: Rand -> Inhalt */
+            margin: 20px;                   /* Außenabstand: Seite -> Karte */
+            border-radius: 10px;            /* abgerundete Ecken */
+        }
+    </style>
+
+</head>
+
+<body>
+<!-- Karte: alles Sichtbare liegt in diesem Kasten (Aussehen siehe .karte im CSS) -->
+<div class="karte" style="width: 100%; height: 100%;">
+
+    <h1> Farb- und Formentest</h1>
+
+    <p>Dies ist mein zweiter HTML-Test. Hier möchte ich mit Farben und Formen probieren.
+        Mal sehen, ob die interaktiv gestalltet werden können.
+    </p>
+
+    <!-- Farbwähler: über die id "color-input" findet JavaScript ihn wieder -->
+    <p>Hier ist ein Eingabefeld für die Farbe:</p>
+    <input type="color" id="color-input" value= "blueviolet">
+
+    <!-- Auswahlliste für die Form: der "value" jeder Option ist gleichzeitig
+         der Name der CSS-Klasse, die JavaScript an die Form hängt -->
+    <p>Hier ist ein Eingabefeld für die Form:</p>
+    <select id="shape-select">
+        <option value="circle">Kreis</option>
+        <option value="square">Quadrat</option>
+        <option value="triangle">Dreieck</option>
+    </select>
+
+    <!-- Die Form selbst: ein leeres div, das erst durch CSS sichtbar wird -->
+    <div id="form"></div>
+    </div>
+    <!-- Ende der Karte -->
+
+
+<script>
+
+    // ============================================================
+    // 1. Elemente aus dem HTML holen (über ihre id)
+    // ============================================================
+    const colorInput = document.getElementById("color-input");
+    const shapeSelect = document.getElementById("shape-select");
+    const form = document.getElementById("form");
+
+    // ============================================================
+    // 2. Farbe und Form ändern
+    // ============================================================
+
+    // Färbt die Form in der Farbe aus dem Farbwähler.
+    // CSS "background-color" heißt in JavaScript "backgroundColor".
+    function updateColor() {
+        form.style.backgroundColor = colorInput.value;
+    }
+
+    // Setzt die gewählte Form ("circle", "square" oder "triangle") als CSS-Klasse.
+    // className ersetzt dabei alle bisherigen Klassen -> immer nur eine Form aktiv.
+    function updateShape() {
+        const selectedShape = shapeSelect.value;
+        form.className = selectedShape;
+    }
+
+    // ============================================================
+    // 3. Form verschieben (Drag & Drop)
+    // ============================================================
+    // "pointer"-Ereignisse funktionieren für Maus, Finger und Stift.
+
+        let ziehen = false;   // Merkzettel: halte ich die Form gerade fest?
+
+    // 1. Maustaste drücken -> festhalten
+    form.addEventListener("pointerdown", function (event) {
+        ziehen = true;
+        // Alle weiteren Mausbewegungen gehen an die Form, auch wenn die Maus
+        // bei schnellen Bewegungen kurz aus der Form herausrutscht
+        form.setPointerCapture(event.pointerId);
+    });
+
+    // 2. Maus bewegen -> Form mitnehmen, aber nur wenn festgehalten
+    form.addEventListener("pointermove", function (event) {
+        if (ziehen === true) {
+            // event.clientX/Y = Mausposition in Pixeln.
+            // left/top setzen die obere linke Ecke der Form. Damit die MITTE
+            // an der Maus hängt, ziehen wir die halbe Breite bzw. Höhe ab.
+            // + "px": CSS braucht eine Einheit ("350px" statt nur 350).
+            form.style.left = (event.clientX - form.offsetWidth / 2) + "px";
+            form.style.top = (event.clientY - form.offsetHeight / 2) + "px";
+        }
+    });
+
+    // 3. Maustaste loslassen -> nicht mehr festhalten
+    form.addEventListener("pointerup", function (event) {
+        ziehen = false;
+    });
+
+
+    // ============================================================
+    // 4. Eingabefelder mit den Funktionen verbinden
+    // ============================================================
+    // "input" = bei jeder Änderung im Feld wird die Funktion ausgeführt
+    colorInput.addEventListener("input", updateColor);
+    shapeSelect.addEventListener("input", updateShape);
+
+</script>
+
+
+</body>
+</html>
