@@ -26,14 +26,11 @@
     <style>
         /* ---------- Seite insgesamt ---------- */
         body {
-         /* Farbverlauf von oben rechts (hellgelb) nach unten links (hellgrün).
-            Ein Verlauf ist für CSS ein Bild -> "background", nicht "background-color" */
-         background: linear-gradient(to bottom left, lightyellow, lightgreen);
+            background: linear-gradient(to bottom left, lightyellow, lightgreen);
         }
 
         /* ---------- Die verschiebbare Form ---------- */
-        /* "#" = Element mit der id "form" (gibt es nur einmal) */
-        #form {
+        .form {
             width: 100px;
             height: 100px;
             background-color: blueviolet;   /* Startfarbe, wird per JavaScript überschrieben */
@@ -45,8 +42,7 @@
         }
 
         /* ---------- Formen ---------- */
-        /* "." = Klasse. JavaScript setzt eine dieser Klassen an #form.
-           Für "square" gibt es keine Regel: ein div ist von sich aus ein Quadrat. */
+        /* Für "square" gibt es keine Regel: ein div ist von sich aus ein Quadrat. */
         .circle {
             border-radius: 50%;             /* Ecken maximal abrunden -> Kreis */
         }
@@ -64,13 +60,21 @@
             margin: 20px;                   /* Außenabstand: Seite -> Karte */
             border-radius: 10px;            /* abgerundete Ecken */
         }
+
+        /* ---------- Ausgewälte Form ---------- */
+        .aktiv {
+            outline: 2pt dashed black;
+        }
+        
+
+
     </style>
 
 </head>
 
 <body>
 <!-- Karte: alles Sichtbare liegt in diesem Kasten (Aussehen siehe .karte im CSS) -->
-<div class="karte" style="width: 100%; height: 100%;">
+<div class="karte">
 
     <h1> Farb- und Formentest</h1>
 
@@ -80,19 +84,22 @@
 
     <!-- Farbwähler: über die id "color-input" findet JavaScript ihn wieder -->
     <p>Hier ist ein Eingabefeld für die Farbe:</p>
-    <input type="color" id="color-input" value= "blueviolet">
+    <input type="color" id="color-input" value="blueviolet">
 
     <!-- Auswahlliste für die Form: der "value" jeder Option ist gleichzeitig
          der Name der CSS-Klasse, die JavaScript an die Form hängt -->
     <p>Hier ist ein Eingabefeld für die Form:</p>
     <select id="shape-select">
-        <option value="circle">Kreis</option>
         <option value="square">Quadrat</option>
+        <option value="circle">Kreis</option>
         <option value="triangle">Dreieck</option>
     </select>
 
+    <button id="duplizieren">Form duplizieren</button>
+    <button id="loeschen">Form löschen</button>
+
     <!-- Die Form selbst: ein leeres div, das erst durch CSS sichtbar wird -->
-    <div id="form"></div>
+    <div class="form"></div>
     </div>
     <!-- Ende der Karte -->
 
@@ -104,7 +111,8 @@
     // ============================================================
     const colorInput = document.getElementById("color-input");
     const shapeSelect = document.getElementById("shape-select");
-    const form = document.getElementById("form");
+    const form = document.querySelector(".form");
+    let ausgewaehlt = null;   // null = noch keine Form ausgewählt
 
     // ============================================================
     // 2. Farbe und Form ändern
@@ -113,55 +121,131 @@
     // Färbt die Form in der Farbe aus dem Farbwähler.
     // CSS "background-color" heißt in JavaScript "backgroundColor".
     function updateColor() {
-        form.style.backgroundColor = colorInput.value;
+        if (ausgewaehlt === null) {
+            return;
+        }
+
+        ausgewaehlt.style.backgroundColor = colorInput.value;
     }
 
     // Setzt die gewählte Form ("circle", "square" oder "triangle") als CSS-Klasse.
-    // className ersetzt dabei alle bisherigen Klassen -> immer nur eine Form aktiv.
     function updateShape() {
+        if (ausgewaehlt === null) {
+            return;
+        }
+
         const selectedShape = shapeSelect.value;
-        form.className = selectedShape;
+        ausgewaehlt.classList.remove("circle", "square", "triangle");
+        ausgewaehlt.classList.add(selectedShape);
+    }
+   
+
+    // ============================================================
+    // 3. Form auswählen & verschieben (Drag & Drop) & abwählen
+    // ============================================================
+
+    function auswaehlen(element) {
+        // alte Auswahl entfernen
+        if (ausgewaehlt !== null) {
+            ausgewaehlt.classList.remove("aktiv");
+        }
+        // neue Form auswählen
+        element.classList.add("aktiv");
+        ausgewaehlt = element;
     }
 
-    // ============================================================
-    // 3. Form verschieben (Drag & Drop)
-    // ============================================================
-    // "pointer"-Ereignisse funktionieren für Maus, Finger und Stift.
 
-        let ziehen = false;   // Merkzettel: halte ich die Form gerade fest?
+    function machBeweglich(element) {
+    let ziehen = false;   // Merkzettel: halte ich die Form gerade fest?
 
     // 1. Maustaste drücken -> festhalten
-    form.addEventListener("pointerdown", function (event) {
+    element.addEventListener("pointerdown", function (event) {
         ziehen = true;
-        // Alle weiteren Mausbewegungen gehen an die Form, auch wenn die Maus
-        // bei schnellen Bewegungen kurz aus der Form herausrutscht
-        form.setPointerCapture(event.pointerId);
+        auswaehlen(element);   // Form auswählen, wenn sie festgehalten wird
+        element.setPointerCapture(event.pointerId);
     });
 
     // 2. Maus bewegen -> Form mitnehmen, aber nur wenn festgehalten
-    form.addEventListener("pointermove", function (event) {
+    element.addEventListener("pointermove", function (event) {
         if (ziehen === true) {
-            // event.clientX/Y = Mausposition in Pixeln.
-            // left/top setzen die obere linke Ecke der Form. Damit die MITTE
-            // an der Maus hängt, ziehen wir die halbe Breite bzw. Höhe ab.
-            // + "px": CSS braucht eine Einheit ("350px" statt nur 350).
-            form.style.left = (event.clientX - form.offsetWidth / 2) + "px";
-            form.style.top = (event.clientY - form.offsetHeight / 2) + "px";
+            element.style.left = (event.clientX - element.offsetWidth / 2) + "px";
+            element.style.top = (event.clientY - element.offsetHeight / 2) + "px";
         }
     });
 
     // 3. Maustaste loslassen -> nicht mehr festhalten
-    form.addEventListener("pointerup", function (event) {
+    element.addEventListener("pointerup", function (event) {
         ziehen = false;
     });
 
+    }
+
+    function abwaehlen() {
+        if (ausgewaehlt !== null) {
+            ausgewaehlt.classList.remove("aktiv");
+            ausgewaehlt = null;
+        }
+    }
+
 
     // ============================================================
-    // 4. Eingabefelder mit den Funktionen verbinden
+    // 4. Formen dupliziern & löschen
+    // ============================================================
+
+    function duplizieren() {
+        if (ausgewaehlt === null) {
+            return;
+        }
+
+        const kopie = ausgewaehlt.cloneNode(); // kopieren der Form
+
+        // etwas versetzt einsetzen
+        kopie.style.left = (ausgewaehlt.offsetLeft + 20) + "px";
+        kopie.style.top = (ausgewaehlt.offsetTop + 20) + "px";
+
+        // kopie auf die Seite setzen
+        ausgewaehlt.parentElement.appendChild(kopie);
+
+        // beweglich machen
+        machBeweglich(kopie);
+
+        // kopie auswählen
+        auswaehlen(kopie);
+
+    }
+
+    function loeschen() {
+        if (ausgewaehlt === null) {
+            return;
+        }
+        ausgewaehlt.remove();
+        ausgewaehlt = null;
+    }
+
+
+    // ============================================================
+    // 5. Eingabefelder mit den Funktionen verbinden
     // ============================================================
     // "input" = bei jeder Änderung im Feld wird die Funktion ausgeführt
     colorInput.addEventListener("input", updateColor);
     shapeSelect.addEventListener("input", updateShape);
+
+    machBeweglich(form);   // Form beweglich machen
+    auswaehlen(form);      // Form auswählen
+
+    duplizierenKnopf = document.getElementById("duplizieren");
+    loeschenKnopf = document.getElementById("loeschen");
+
+    duplizierenKnopf.addEventListener("click", duplizieren);
+    loeschenKnopf.addEventListener("click", loeschen);
+
+    document.addEventListener("pointerdown", function (event) {
+        if (event.target.closest(".form, button, input, select")) {
+            return;
+        }
+        abwaehlen();
+    });
+
 
 </script>
 
